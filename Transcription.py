@@ -15,6 +15,7 @@ source = sr.Microphone(sample_rate=16000)
 recorder = sr.Recognizer()
 recorder.energy_threshold = 1000
 recorder.dynamic_energy_threshold = False
+recorder.pause_threshold = 1
 timeout = 15
 with source:
     recorder.adjust_for_ambient_noise(source)
@@ -161,15 +162,17 @@ import time
 def transcribe_return():
     gen = continual_transcription()
     result = ""
+    last_update = time.time()
     while True:
         try:
             if len(result) > 1:
-                if :
-                        return result.strip()
+                if time.time() - last_update > 3:
+                    return result.strip()
             text = next(gen)
             if len(text) > 1:
                 result += text + " "
                 print(text, end=" ", flush=True)
-            sleep(0.1)
+                last_update = time.time()
+            sleep(0.15)
         except KeyboardInterrupt:
             break
