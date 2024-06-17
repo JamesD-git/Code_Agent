@@ -10,6 +10,53 @@ from queue import Queue
 from time import sleep
 from sys import platform
 
+audio_model = whisper.load_model('small.en')
+source = sr.Microphone(sample_rate=16000)
+recorder = sr.Recognizer()
+recorder.energy_threshold = 1000
+recorder.dynamic_energy_threshold = False
+timeout = 15
+with source:
+    recorder.adjust_for_ambient_noise(source)
+data_queue = Queue()
+def record_callback(_, audio:sr.AudioData) -> None:
+    """
+    Threaded callback function to receive audio data when recordings finish.
+    audio: An AudioData containing the recorded bytes.
+    """
+    # Grab the raw bytes and push it into the thread safe queue.
+    data = audio.get_raw_data()
+    data_queue.put(data)
+recorder.listen_in_background(source, record_callback, phrase_time_limit=timeout)
+print("Audio model loaded. \n")
+
+def continual_transcription():
+    # Cue the user that we're ready to go.
+    print("Input: \n")
+    while True:
+        try:
+            # Pull raw recorded audio from the queue.
+            if not data_queue.empty():
+                audio_data = data_queue.get()
+                
+                # Convert in-ram buffer to something the model can use directly without needing a temp file.
+                # Convert data from 16 bit wide integers to floating point with a width of 32 bits.
+                # Clamp the audio stream frequency to a PCM wavelength compatible default of 32768hz max.
+                audio_np = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768.0
+
+                # Read the transcription.
+                result = audio_model.transcribe(audio_np)
+                text = result['text'].strip()
+                for word in text.split(' '):
+                    # print(word, end=' ', flush=True)
+                    yield word
+            else:
+                # Infinite loops are bad for processors, must sleep.
+                sleep(0.25)
+                yield ""
+        except KeyboardInterrupt:
+            break
+    
 
 def main():
     parser = argparse.ArgumentParser()
@@ -106,6 +153,23 @@ def main():
 
     print("\n\nTranscription:")
 
-
 if __name__ == "__main__":
     main()
+
+import time
+
+def transcribe_return():
+    gen = continual_transcription()
+    result = ""
+    while True:
+        try:
+            if len(result) > 1:
+                if :
+                        return result.strip()
+            text = next(gen)
+            if len(text) > 1:
+                result += text + " "
+                print(text, end=" ", flush=True)
+            sleep(0.1)
+        except KeyboardInterrupt:
+            break
