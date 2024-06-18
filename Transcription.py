@@ -15,7 +15,8 @@ source = sr.Microphone(sample_rate=16000)
 recorder = sr.Recognizer()
 recorder.energy_threshold = 1000
 recorder.dynamic_energy_threshold = False
-recorder.pause_threshold = 1
+recorder.non_speaking_duration = 0.2
+recorder.pause_threshold = 0.3
 timeout = 15
 with source:
     recorder.adjust_for_ambient_noise(source)
@@ -33,7 +34,7 @@ print("Audio model loaded. \n")
 
 def continual_transcription():
     # Cue the user that we're ready to go.
-    print("Input: \n")
+    # print("Input: \n")
     while True:
         try:
             # Pull raw recorded audio from the queue.
@@ -166,13 +167,13 @@ def transcribe_return():
     while True:
         try:
             if len(result) > 1:
-                if time.time() - last_update > 3:
+                if time.time() - last_update > 4:
                     return result.strip()
             text = next(gen)
             if len(text) > 1:
                 result += text + " "
                 print(text, end=" ", flush=True)
                 last_update = time.time()
-            sleep(0.15)
+            sleep(0.25)
         except KeyboardInterrupt:
             break
