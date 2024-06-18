@@ -13,11 +13,9 @@ from sys import platform
 audio_model = whisper.load_model('small.en')
 source = sr.Microphone(sample_rate=16000)
 recorder = sr.Recognizer()
-recorder.energy_threshold = 1000
+recorder.energy_threshold = 800
 recorder.dynamic_energy_threshold = False
-recorder.non_speaking_duration = 0.2
-recorder.pause_threshold = 0.3
-timeout = 15
+timeout = 120
 with source:
     recorder.adjust_for_ambient_noise(source)
 data_queue = Queue()
@@ -160,20 +158,24 @@ if __name__ == "__main__":
 
 import time
 
-def transcribe_return():
+def transcribe_return(event):
     gen = continual_transcription()
     result = ""
     last_update = time.time()
     while True:
         try:
             if len(result) > 1:
-                if time.time() - last_update > 4:
+                if time.time() - last_update > 1:
                     return result.strip()
             text = next(gen)
             if len(text) > 1:
                 result += text + " "
                 print(text, end=" ", flush=True)
                 last_update = time.time()
-            sleep(0.25)
+            elif len(text) == 0:
+                if event.is_set():
+                    # print("EVENT SET")
+                    return
+            sleep(0.05)
         except KeyboardInterrupt:
             break
